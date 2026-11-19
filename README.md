@@ -84,7 +84,7 @@ cp .env.example .env
 | `PORT` | Port server (default `3000`) |
 | `NODE_ENV` | `development` / `production` / `test` |
 | `DB_HOST`, `DB_PORT` | Alamat PostgreSQL (default `localhost:5432`) |
-| `DB_USER`, `DB_PASSWORD` | Kredensial PostgreSQL |
+| `DB_USER`, `DB_PASSWORD` | Username & password PostgreSQL **di komputer kamu** (yang dibuat saat instalasi PostgreSQL) |
 | `DB_NAME` | Nama database (default `talenavi_shop`) |
 | `JWT_SECRET` | String acak **minimal 32 karakter** |
 | `JWT_EXPIRES_IN` | Masa berlaku token (default `1d`) |
