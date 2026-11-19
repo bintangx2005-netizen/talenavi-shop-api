@@ -18,9 +18,10 @@ Mencakup autentikasi user, katalog produk (pagination, search, filter, sort), ke
 9. [Daftar Endpoint](#daftar-endpoint)
 10. [Desain Database](#desain-database)
 11. [Logic Checkout](#logic-checkout)
-12. [Struktur Project](#struktur-project)
-13. [Keamanan](#keamanan)
-14. [Format Response](#format-response)
+12. [Testing](#testing)
+13. [Struktur Project](#struktur-project)
+14. [Keamanan](#keamanan)
+15. [Format Response](#format-response)
 
 ---
 
@@ -282,6 +283,28 @@ Contoh response stok tidak mencukupi:
 }
 ```
 
+## Testing
+
+Integration test untuk checkout memakai test runner bawaan Node (`node:test`) dan [`supertest`](https://github.com/ladjs/supertest). Request dikirim ke `app` (tanpa membuka port), melewati seluruh layer sampai PostgreSQL, lalu hasilnya dicek dari response **dan** langsung dari database.
+
+```bash
+npm test
+```
+
+Test memakai **database terpisah** bernama `<DB_NAME>_test` (mis. `talenavi_shop_test`, bisa diganti lewat env `TEST_DB_NAME`). Database ini dibuat, dikosongkan, lalu di-migrate dan di-seed ulang setiap kali `npm test` dijalankan, sehingga data development tidak tersentuh.
+
+| Skenario ([`tests/checkout.test.js`](tests/checkout.test.js)) | Yang diverifikasi |
+|---|---|
+| Checkout berhasil | `201`, total benar, snapshot judul/harga, stok berkurang, keranjang kosong |
+| Keranjang kosong | `422`, tidak ada order dibuat |
+| Stok kurang | `409` dengan detail produk; **rollback**: stok, order, dan keranjang tidak berubah |
+| Harga produk berubah setelah checkout | Detail order tetap memakai harga snapshot |
+| Race condition (row lock) | Checkout **menunggu** baris produk yang sedang dikunci transaksi lain, lalu membaca stok terbaru → `409`, stok tidak minus |
+| Dua checkout bersamaan | Tepat satu `201` dan satu `409` |
+| Order milik user lain / tanpa token | `404` / `401` |
+
+Test race condition bersifat deterministik: test membuka transaksi sendiri yang mengunci baris produk, lalu memastikan checkout tertahan. Jika `FOR UPDATE` dihapus dari repository, test ini gagal (checkout membaca stok lama dan berakhir `500` karena CHECK constraint).
+
 ## Struktur Project
 
 ```
@@ -297,6 +320,10 @@ src/
 ├── services/          # Business logic (aturan cart, checkout, auth)
 ├── repositories/      # Query SQL ke PostgreSQL
 └── utils/             # AppError, response helper, jwt, pagination
+tests/
+├── helpers/test-env.js  # Mengarahkan aplikasi ke database test
+├── setup-test-db.js     # create → reset → migrate → seed database test
+└── checkout.test.js     # Integration test checkout
 ```
 
 Alur request: `routes → middlewares → controller → service → repository → database`. Controller tidak menulis SQL, repository tidak mengetahui HTTP.
