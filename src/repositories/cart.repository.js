@@ -4,6 +4,8 @@ const { pool } = require('../config/database');
 // Dengan begitu user tidak mungkin membaca/mengubah item milik user lain:
 // item orang lain dianggap "tidak ada" (404).
 
+// JOIN ke products agar harga & stok yang tampil di cart selalu yang TERBARU
+// (cart tidak menyimpan harga; harga baru dibekukan saat checkout).
 const SELECT_CART_ITEM = `
   SELECT
     ci.id, ci.product_id, ci.quantity, ci.created_at,
@@ -12,6 +14,7 @@ const SELECT_CART_ITEM = `
   JOIN products p ON p.id = ci.product_id
 `;
 
+// Ubah baris datar hasil JOIN menjadi objek dengan data produk bersarang
 function toCartItem(row) {
   return {
     id: row.id,
@@ -28,6 +31,7 @@ function toCartItem(row) {
   };
 }
 
+// Seluruh isi cart milik user, urut dari yang pertama ditambahkan
 async function findAllByUser(userId) {
   const { rows } = await pool.query(
     `${SELECT_CART_ITEM}
@@ -38,6 +42,7 @@ async function findAllByUser(userId) {
   return rows.map(toCartItem);
 }
 
+// WHERE id AND user_id: item milik orang lain -> tidak ketemu -> null -> 404
 async function findByIdForUser(id, userId) {
   const { rows } = await pool.query(`${SELECT_CART_ITEM} WHERE ci.id = $1 AND ci.user_id = $2`, [
     id,
@@ -46,6 +51,7 @@ async function findByIdForUser(id, userId) {
   return rows[0] ? toCartItem(rows[0]) : null;
 }
 
+// Cek apakah produk ini sudah ada di cart user (untuk menghitung total quantity vs stok)
 async function findByUserAndProduct(userId, productId) {
   const { rows } = await pool.query(
     'SELECT id, quantity FROM cart_items WHERE user_id = $1 AND product_id = $2',
@@ -72,6 +78,7 @@ async function addQuantity(userId, productId, quantity) {
   return rows[0].id;
 }
 
+// rowCount = jumlah baris yang terkena UPDATE/DELETE. 0 berarti item tidak ada / bukan miliknya.
 async function updateQuantity(id, userId, quantity) {
   const { rowCount } = await pool.query(
     'UPDATE cart_items SET quantity = $1 WHERE id = $2 AND user_id = $3',
@@ -107,6 +114,7 @@ async function findForCheckout(userId, db = pool) {
   return rows;
 }
 
+// Kosongkan cart setelah order berhasil dibuat (masih di dalam transaksi checkout)
 async function clearByUser(userId, db = pool) {
   await db.query('DELETE FROM cart_items WHERE user_id = $1', [userId]);
 }

@@ -9,6 +9,7 @@ const router = Router();
 // Semua endpoint order wajib login
 router.use(authenticate);
 
+// POST /api/orders = checkout (membuat order baru dari isi cart)
 router.post('/', orderController.checkout);
 router.get('/', validate({ query: paginationQuerySchema }), orderController.list);
 router.get('/:id', validate({ params: idParamSchema }), orderController.show);

@@ -5,12 +5,14 @@ const { pool } = require('../config/database');
 const env = require('../config/env');
 
 async function main() {
+  // Pengaman: jangan sampai data asli terhapus
   if (env.NODE_ENV === 'production') {
     throw new Error('db:reset tidak boleh dijalankan di production');
   }
 
+  // CASCADE = ikut hapus semua isi schema (tabel, index, constraint, schema_migrations)
   await pool.query('DROP SCHEMA public CASCADE');
-  await pool.query('CREATE SCHEMA public');
+  await pool.query('CREATE SCHEMA public'); // schema kosong yang siap diisi migration lagi
   console.log(`Semua tabel di database "${env.DB_NAME}" sudah dihapus.`);
 }
 

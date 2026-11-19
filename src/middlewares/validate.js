@@ -7,6 +7,7 @@ const AppError = require('../utils/AppError');
 function formatZodErrors(zodError) {
   const errors = {};
   for (const issue of zodError.issues) {
+    // path = lokasi field yang salah, mis. ['email'] -> 'email'
     const field = issue.path.join('.') || '_body';
     if (!errors[field]) errors[field] = [];
     errors[field].push(issue.message);
@@ -22,10 +23,12 @@ function formatZodErrors(zodError) {
  * string -> number) disimpan di req.validated.body / .query / .params.
  * Controller sebaiknya membaca dari req.validated, bukan req.body mentah.
  */
+// validate() adalah "middleware factory": fungsi yang MENGEMBALIKAN middleware,
+// sehingga satu kode bisa dipakai ulang dengan skema yang berbeda di tiap route.
 function validate(schemas) {
   return (req, res, next) => {
     req.validated = {};
-    const allErrors = {};
+    const allErrors = {}; // kumpulkan SEMUA error dulu, supaya client tahu semua kesalahannya sekaligus
 
     for (const source of ['params', 'query', 'body']) {
       const schema = schemas[source];
@@ -41,11 +44,12 @@ function validate(schemas) {
       }
     }
 
+    // Ada error -> berhenti di sini, controller tidak dijalankan (422)
     if (Object.keys(allErrors).length > 0) {
       return next(AppError.validation(allErrors));
     }
 
-    return next();
+    return next(); // semua valid -> lanjut ke controller
   };
 }
 

@@ -13,10 +13,14 @@ const { pool, withTransaction } = require('../config/database');
 const env = require('../config/env');
 const { categories, products, users } = require('./seeders/data');
 
+// Mengembalikan peta slug -> id, mis. { smartphones: 1, laptops: 2, ... },
+// dipakai produk untuk mengisi category_id (id dibuat otomatis oleh database).
 async function seedCategories(client) {
   const slugToId = {};
 
   for (const category of categories) {
+    // EXCLUDED = baris yang tadinya mau di-INSERT (data baru dari seeder)
+    // RETURNING = minta database mengembalikan id baris yang di-insert/di-update
     const { rows } = await client.query(
       `INSERT INTO categories (slug, name)
        VALUES ($1, $2)
@@ -37,6 +41,8 @@ async function seedProducts(client, slugToId) {
       throw new Error(`Kategori "${product.category}" untuk produk ${product.sku} tidak ditemukan`);
     }
 
+    // Perhatikan: `stock` TIDAK ada di bagian DO UPDATE, jadi seed ulang
+    // tidak mengembalikan stok yang sudah berkurang karena checkout.
     await client.query(
       `INSERT INTO products (category_id, sku, title, description, price, stock, image_url)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -61,8 +67,10 @@ async function seedProducts(client, slugToId) {
 
 async function seedUsers(client) {
   for (const user of users) {
+    // Password tidak pernah disimpan mentah, selalu di-hash dengan bcrypt
     const hashedPassword = await bcrypt.hash(user.password, env.BCRYPT_SALT_ROUNDS);
 
+    // ON CONFLICT ((LOWER(email))) cocok dengan unique index users_email_unique
     await client.query(
       `INSERT INTO users (name, email, password, role)
        VALUES ($1, $2, $3, $4)
@@ -79,6 +87,7 @@ async function main() {
     await seedUsers(client);
   });
 
+  // Ringkasan jumlah data setelah seeding (ditampilkan di terminal)
   const { rows } = await pool.query(`
     SELECT
       (SELECT COUNT(*) FROM categories) AS categories,

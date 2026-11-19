@@ -19,6 +19,7 @@ function withSubtotal(item) {
   };
 }
 
+// "assert" = pastikan kondisi terpenuhi, kalau tidak lempar error (422)
 function assertWithinStock(quantity, stock, alreadyInCart = 0) {
   if (quantity > stock) {
     const detail =
@@ -29,9 +30,12 @@ function assertWithinStock(quantity, stock, alreadyInCart = 0) {
   }
 }
 
+// Total dihitung di JS dari data terbaru, tidak disimpan di database
+// (kalau disimpan, bisa basi saat harga produk berubah).
 async function getCart(userId) {
   const items = (await cartRepository.findAllByUser(userId)).map(withSubtotal);
 
+  // reduce = menjumlahkan semua item menjadi satu angka, mulai dari 0
   return {
     items,
     total_items: items.length,
@@ -47,17 +51,21 @@ async function addItem(userId, { product_id: productId, quantity }) {
   }
 
   const existing = await cartRepository.findByUserAndProduct(userId, productId);
+  // ?. dan ?? : kalau belum ada di cart (existing = null), anggap quantity-nya 0
   const alreadyInCart = existing?.quantity ?? 0;
 
   // Yang dicek adalah total quantity SETELAH ditambah
   assertWithinStock(alreadyInCart + quantity, product.stock, alreadyInCart);
 
+  // Upsert, lalu ambil ulang item lengkap (dengan data produk) untuk response
   const itemId = await cartRepository.addQuantity(userId, productId, quantity);
   const item = await cartRepository.findByIdForUser(itemId, userId);
 
+  // created dipakai controller: true -> 201 Created, false (quantity ditambah) -> 200 OK
   return { item: withSubtotal(item), created: !existing };
 }
 
+// Mengganti quantity (bukan menambah). Item harus milik user ini.
 async function updateItem(userId, itemId, { quantity }) {
   const item = await cartRepository.findByIdForUser(itemId, userId);
   if (!item) {
@@ -70,6 +78,7 @@ async function updateItem(userId, itemId, { quantity }) {
   return withSubtotal({ ...item, quantity });
 }
 
+// DELETE langsung dengan filter user_id; tidak ada baris terhapus = 404
 async function removeItem(userId, itemId) {
   const deleted = await cartRepository.deleteByIdForUser(itemId, userId);
   if (!deleted) {

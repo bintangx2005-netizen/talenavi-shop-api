@@ -7,7 +7,9 @@ const { idParamSchema } = require('../validators/common.validator');
 // Public: tidak butuh login
 const router = Router();
 
+// GET /api/products       -> validasi query (page, limit, q, category, sort)
 router.get('/', validate({ query: listProductsQuerySchema }), productController.list);
+// GET /api/products/:id   -> validasi :id harus bilangan bulat positif
 router.get('/:id', validate({ params: idParamSchema }), productController.show);
 
 module.exports = router;

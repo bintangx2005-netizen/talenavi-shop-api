@@ -1,4 +1,7 @@
 // Data awal untuk seeder. Harga dalam Rupiah.
+// Isinya hanya data (tanpa logika), dipisah dari seed.js supaya mudah dibaca/diubah.
+// Ringkasan: 5 kategori, 30 produk (6 per kategori), 2 user (customer & admin).
+// SP-006 "Kirana Fold" sengaja diberi stok 2 untuk demo error stok tidak cukup.
 
 const categories = [
   { slug: 'smartphones', name: 'Smartphones' },

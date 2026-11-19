@@ -1,3 +1,5 @@
+// Koneksi ke PostgreSQL memakai library `pg` (driver murni, tanpa ORM).
+// Semua repository mengambil `pool` dari sini.
 const { Pool, types } = require('pg');
 const env = require('./env');
 
@@ -14,9 +16,10 @@ const pool = new Pool({
   user: env.DB_USER,
   password: env.DB_PASSWORD,
   database: env.DB_NAME,
-  max: 10,
+  max: 10, // maksimal 10 koneksi bersamaan; request lain antre menunggu koneksi kosong
 });
 
+// Error pada koneksi yang sedang menganggur (mis. DB restart) dicatat agar app tidak crash
 pool.on('error', (err) => {
   console.error('Unexpected PostgreSQL pool error:', err.message);
 });
@@ -31,7 +34,7 @@ pool.on('error', (err) => {
  * di dalam transaksi (bukan `pool.query`), karena transaksi terikat ke satu koneksi.
  */
 async function withTransaction(callback) {
-  const client = await pool.connect();
+  const client = await pool.connect(); // pinjam SATU koneksi khusus dari pool
   try {
     await client.query('BEGIN');
     const result = await callback(client);
@@ -41,6 +44,7 @@ async function withTransaction(callback) {
     await client.query('ROLLBACK');
     throw err;
   } finally {
+    // Selalu dikembalikan ke pool (sukses maupun gagal), kalau tidak koneksi "bocor"
     client.release();
   }
 }

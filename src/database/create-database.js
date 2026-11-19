@@ -14,6 +14,7 @@ async function main() {
   await client.connect();
 
   try {
+    // pg_database = katalog sistem PostgreSQL yang berisi daftar semua database
     const { rowCount } = await client.query('SELECT 1 FROM pg_database WHERE datname = $1', [
       env.DB_NAME,
     ]);

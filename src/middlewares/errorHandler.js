@@ -12,6 +12,8 @@ function notFoundHandler(req, res) {
 // Global error handler. Express 5 otomatis meneruskan error dari handler async ke sini.
 // Prinsip: client hanya melihat pesan yang aman. Stack trace dan pesan internal
 // database hanya ditulis ke log server.
+// Express mengenali error handler dari jumlah parameternya: HARUS 4 (err, req, res, next),
+// walaupun `next` tidak dipakai.
 // eslint-disable-next-line no-unused-vars
 function errorHandler(err, req, res, next) {
   // Error yang memang kita lempar sendiri (404, 409, 422, ...)

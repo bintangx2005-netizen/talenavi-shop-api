@@ -1,3 +1,4 @@
+// Service order: checkout (bagian paling penting di project ini), riwayat, dan detail order.
 const { withTransaction } = require('../config/database');
 const AppError = require('../utils/AppError');
 const { getOffset, buildPaginationMeta } = require('../utils/pagination');
@@ -5,6 +6,7 @@ const cartRepository = require('../repositories/cart.repository');
 const productRepository = require('../repositories/product.repository');
 const orderRepository = require('../repositories/order.repository');
 
+// Subtotal item order dihitung dari harga SNAPSHOT (order_items.price), bukan harga produk sekarang
 function withSubtotal(item) {
   return { ...item, subtotal: item.price * item.quantity };
 }
@@ -26,6 +28,8 @@ function withSubtotal(item) {
  *   COMMIT
  */
 async function checkout(userId) {
+  // Semua query di bawah memakai `client` (koneksi transaksi), BUKAN pool,
+  // supaya semuanya masuk ke transaksi yang sama.
   return withTransaction(async (client) => {
     // 1. Isi cart (dikunci)
     const cartItems = await cartRepository.findForCheckout(userId, client);
@@ -37,6 +41,7 @@ async function checkout(userId) {
     //    sama akan menunggu di sini sampai transaksi ini selesai.
     const productIds = cartItems.map((item) => item.product_id);
     const products = await productRepository.findByIdsForUpdate(productIds, client);
+    // Map id -> produk agar pencarian produk per item cepat: productById.get(6)
     const productById = new Map(products.map((product) => [product.id, product]));
 
     // 3. Validasi stok. Kumpulkan SEMUA produk yang kurang, bukan hanya yang pertama,
@@ -50,6 +55,7 @@ async function checkout(userId) {
         );
       }
     }
+    // throw di dalam withTransaction -> otomatis ROLLBACK (lock juga dilepas)
     if (insufficient.length > 0) {
       throw AppError.conflict('Insufficient stock for some products', { stock: insufficient });
     }
@@ -85,10 +91,12 @@ async function checkout(userId) {
     // 7. Kosongkan cart
     await cartRepository.clearByUser(userId, client);
 
+    // return tanpa error -> withTransaction menjalankan COMMIT, semua perubahan tersimpan
     return { ...order, items: orderItems };
   });
 }
 
+// Riwayat order milik user (dengan pagination). Hanya baca, jadi tidak perlu transaksi.
 async function listOrders(userId, { page, limit }) {
   const { items, total } = await orderRepository.findAllByUser(userId, {
     limit,
@@ -97,6 +105,7 @@ async function listOrders(userId, { page, limit }) {
   return { items, meta: buildPaginationMeta({ page, limit, total }) };
 }
 
+// Detail order. Order milik user lain -> 404 (bukan 403), supaya keberadaannya tidak bocor.
 async function getOrderById(userId, orderId) {
   const order = await orderRepository.findByIdForUser(orderId, userId);
   if (!order) {

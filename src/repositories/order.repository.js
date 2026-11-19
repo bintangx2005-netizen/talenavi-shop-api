@@ -1,7 +1,9 @@
+// Repository order: SQL untuk tabel orders dan order_items.
 const { pool } = require('../config/database');
 
 // ---- Tulis (dipanggil di dalam transaction checkout, `db` = client transaksi) ----
 
+// Buat "kepala" order. status tidak diisi -> DEFAULT 'pending'.
 async function create({ userId, totalPrice }, db = pool) {
   const { rows } = await db.query(
     `INSERT INTO orders (user_id, total_price)
@@ -26,6 +28,10 @@ async function createItem({ orderId, productId, productTitle, quantity, price },
 
 // ---- Baca (selalu difilter user_id: order orang lain dianggap tidak ada) ----
 
+// Riwayat order + ringkasan tiap order:
+// total_items = jumlah jenis produk, total_quantity = jumlah semua barang.
+// COALESCE(SUM(...), 0) = kalau SUM bernilai NULL (tidak ada item), pakai 0.
+// ::int = ubah hasil SUM (tipe bigint) ke integer.
 async function findAllByUser(userId, { limit, offset }) {
   const dataQuery = pool.query(
     `SELECT
@@ -49,6 +55,7 @@ async function findAllByUser(userId, { limit, offset }) {
   return { items: dataResult.rows, total: countResult.rows[0].total };
 }
 
+// Detail order hanya kalau order itu milik user yang login
 async function findByIdForUser(id, userId) {
   const { rows } = await pool.query(
     `SELECT id, user_id, total_price, status, created_at
@@ -59,6 +66,7 @@ async function findByIdForUser(id, userId) {
   return rows[0] ?? null;
 }
 
+// Item-item dalam satu order (dipanggil setelah kepemilikan order sudah dicek)
 async function findItemsByOrderId(orderId) {
   const { rows } = await pool.query(
     `SELECT id, product_id, product_title, quantity, price

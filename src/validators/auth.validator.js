@@ -1,3 +1,5 @@
+// Validator = "aturan" bentuk data yang boleh masuk (dipakai oleh middleware validate).
+// Ditulis dengan zod: skema dibaca dari atas ke bawah, tiap method adalah satu aturan.
 const { z } = require('zod');
 
 // String wajib dengan pesan yang jelas: "X is required" kalau tidak dikirim,
@@ -7,6 +9,8 @@ const requiredString = (label) =>
     error: (issue) => (issue.input === undefined ? `${label} is required` : `${label} must be a string`),
   });
 
+// Email dibersihkan dulu (hapus spasi, huruf kecil semua) baru dicek formatnya.
+// .pipe() = setelah dibersihkan, teruskan hasilnya ke validasi format email.
 const email = requiredString('Email')
   .trim()
   .toLowerCase()
@@ -25,6 +29,8 @@ const registerSchema = z.object({
     .max(72, 'Password must be at most 72 characters'),
 });
 
+// Login tidak mengecek panjang minimal password: cukup "tidak kosong",
+// benar/salahnya password diperiksa oleh bcrypt di service.
 const loginSchema = z.object({
   email,
   password: requiredString('Password').min(1, 'Password is required'),

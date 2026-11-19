@@ -16,6 +16,7 @@ async function authenticate(req, res, next) {
     throw AppError.unauthorized('Authentication token is missing');
   }
 
+  // "Bearer eyJhbGci..." dipecah menjadi ['Bearer', 'eyJhbGci...']
   const [scheme, token] = header.split(' ');
   if (scheme !== 'Bearer' || !token) {
     throw AppError.unauthorized('Authorization header must use the format: Bearer <token>');
@@ -23,6 +24,7 @@ async function authenticate(req, res, next) {
 
   let payload;
   try {
+    // Cek signature (dibuat dengan JWT_SECRET kita?) dan masa berlaku (exp)
     payload = verifyToken(token);
   } catch (err) {
     if (err instanceof jwt.TokenExpiredError) {
@@ -37,6 +39,7 @@ async function authenticate(req, res, next) {
     throw AppError.unauthorized('User no longer exists');
   }
 
+  // Simpan user di req agar controller berikutnya tahu siapa yang login (req.user.id)
   req.user = user;
   return next();
 }
@@ -45,6 +48,7 @@ async function authenticate(req, res, next) {
  * Middleware pembatas role, dipakai SETELAH authenticate.
  * Contoh: router.post('/', authenticate, authorize('admin'), handler)
  */
+// Belum dipakai di endpoint mana pun (belum ada fitur khusus admin), disiapkan untuk admin CRUD.
 function authorize(...allowedRoles) {
   return (req, res, next) => {
     if (!allowedRoles.includes(req.user?.role)) {

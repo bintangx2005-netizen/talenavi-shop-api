@@ -1,3 +1,4 @@
+// Repository produk: semua SQL untuk tabel products ada di sini.
 const { pool } = require('../config/database');
 
 // ORDER BY tidak bisa memakai parameter ($1), jadi nilai sort dari user TIDAK
@@ -10,6 +11,9 @@ const SORT_SQL = {
   price_desc: 'p.price DESC, p.id DESC',
 };
 
+// Bagian SELECT yang dipakai ulang oleh findAll dan findById.
+// JOIN ke categories agar data kategori ikut terambil dalam satu query.
+// p dan c = alias (nama pendek) untuk products dan categories.
 const SELECT_PRODUCT = `
   SELECT
     p.id, p.sku, p.title, p.description, p.price, p.stock, p.image_url, p.created_at,
@@ -52,6 +56,9 @@ function buildFilters({ q, category }) {
   const conditions = [];
   const params = [];
 
+  // Contoh q="phone": params = ['%phone%'], conditions = ['p.title ILIKE $1']
+  // ILIKE = LIKE yang tidak membedakan huruf besar/kecil. %...% = mengandung kata itu.
+  // $${params.length} -> "$" + nomor urut parameter, jadi "$1", "$2", dst.
   if (q) {
     params.push(`%${escapeLike(q)}%`);
     conditions.push(`p.title ILIKE $${params.length}`);
@@ -62,14 +69,17 @@ function buildFilters({ q, category }) {
     conditions.push(`c.slug = $${params.length}`);
   }
 
+  // Tidak ada filter -> WHERE dikosongkan (semua produk)
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   return { where, params };
 }
 
 async function findAll({ q, category, sort, limit, offset }) {
   const { where, params } = buildFilters({ q, category });
-  const orderBy = SORT_SQL[sort] ?? SORT_SQL.newest;
+  const orderBy = SORT_SQL[sort] ?? SORT_SQL.newest; // ambil dari whitelist, default newest
 
+  // LIMIT & OFFSET juga lewat parameter, nomornya melanjutkan params filter.
+  // Belum di-await: query dijalankan dulu, ditunggu bersamaan di Promise.all di bawah.
   const dataQuery = pool.query(
     `${SELECT_PRODUCT}
      ${where}
@@ -87,6 +97,7 @@ async function findAll({ q, category, sort, limit, offset }) {
     params,
   );
 
+  // Tunggu kedua query sekaligus (paralel), lebih cepat daripada satu per satu
   const [dataResult, countResult] = await Promise.all([dataQuery, countQuery]);
 
   return {
@@ -95,6 +106,7 @@ async function findAll({ q, category, sort, limit, offset }) {
   };
 }
 
+// Detail satu produk; null kalau tidak ada (service yang mengubahnya jadi 404)
 async function findById(id) {
   const { rows } = await pool.query(`${SELECT_PRODUCT} WHERE p.id = $1`, [id]);
   return rows[0] ? toProduct(rows[0]) : null;
@@ -111,6 +123,8 @@ async function findById(id) {
  * ORDER BY id: semua transaksi mengunci dengan urutan yang sama, mencegah deadlock
  * (A mengunci produk 1 lalu menunggu 2, sementara B mengunci 2 lalu menunggu 1).
  */
+// `id = ANY($1::int[])` = id ada di dalam array, mis. [1, 6]. Satu query untuk banyak id.
+// Parameter `db` default ke pool, tapi saat checkout diisi `client` transaksi.
 async function findByIdsForUpdate(ids, db = pool) {
   const { rows } = await db.query(
     `SELECT id, title, price, stock
@@ -123,6 +137,8 @@ async function findByIdsForUpdate(ids, db = pool) {
   return rows;
 }
 
+// `stock = stock - $1` dihitung oleh database dari nilai terbaru (bukan nilai lama dari JS).
+// Kalau hasilnya minus, CHECK (stock >= 0) menolak dan seluruh transaksi di-ROLLBACK.
 async function decrementStock(id, quantity, db = pool) {
   await db.query('UPDATE products SET stock = stock - $1 WHERE id = $2', [quantity, id]);
 }

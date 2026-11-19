@@ -7,11 +7,13 @@ const { idParamSchema } = require('../validators/common.validator');
 
 const router = Router();
 
-// Semua endpoint cart wajib login
+// Semua endpoint cart wajib login.
+// router.use = pasang middleware untuk SEMUA route di bawahnya sekaligus.
 router.use(authenticate);
 
 router.get('/', cartController.show);
 router.post('/items', validate({ body: addCartItemSchema }), cartController.addItem);
+// PATCH (bukan PUT) karena hanya mengubah sebagian data: quantity saja
 router.patch(
   '/items/:id',
   validate({ params: idParamSchema, body: updateCartItemSchema }),
