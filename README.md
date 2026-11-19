@@ -3,6 +3,19 @@
 REST API untuk toko online sederhana — **Product Catalog & Order API** (Technical Test Backend Intern Talenavi).
 Mencakup autentikasi user, katalog produk (pagination, search, filter, sort), keranjang belanja, dan checkout pesanan dalam satu database transaction.
 
+**Fitur wajib:** seeder idempotent · register/login JWT + bcrypt · katalog public · keranjang · checkout transactional dengan snapshot harga · dokumentasi Postman (contoh sukses & error).
+
+**Nilai tambah yang dikerjakan:**
+
+| Fitur | Keterangan |
+|---|---|
+| Row locking checkout | `SELECT … FOR UPDATE` agar checkout bersamaan tidak membuat stok minus ([Logic Checkout](#logic-checkout)) |
+| Role admin + CRUD produk | `POST/PATCH/DELETE /api/products`, hanya untuk role `admin` ([Daftar Endpoint](#daftar-endpoint)) |
+| Integration test | 21 test untuk checkout dan CRUD admin, dijalankan dengan `npm test` ([Testing](#testing)) |
+| Docker / docker-compose | API + PostgreSQL dengan satu perintah ([Docker](#menjalankan-dengan-docker-opsional)) |
+| Rate limiting login | 10 percobaan / 15 menit per IP |
+| Logging | Log request (morgan) dan error internal di server |
+
 ---
 
 ## Daftar Isi
@@ -394,6 +407,8 @@ Alur request: `routes → middlewares → controller → service → repository 
 - Login mengembalikan pesan yang sama untuk email tidak terdaftar maupun password salah (mencegah *user enumeration*), dan dibatasi **rate limit**.
 - Semua query memakai **parameterized query** (`$1, $2, …`); nilai `sort` dipetakan melalui whitelist → aman dari SQL injection.
 - **Otorisasi data:** query cart dan order selalu memfilter `user_id` dari token; data milik user lain menghasilkan `404`.
+- **Otorisasi role:** endpoint admin dijaga `authorize('admin')` (bukan admin → `403`). Role dibaca ulang dari database di setiap request, dan registrasi selalu menghasilkan role `customer`, sehingga user tidak bisa menjadikan dirinya admin.
+- Kolom yang boleh diubah lewat endpoint admin dibatasi whitelist; field lain di body (mis. `id`, `created_at`) dibuang oleh validasi.
 - Semua input divalidasi dengan **zod**; error internal tidak pernah ditampilkan ke client (hanya dicatat di log server).
 - Secret disimpan di `.env` (tidak di-commit); tersedia `.env.example`.
 - Header keamanan HTTP dengan **helmet** dan batas ukuran body 100kb.
