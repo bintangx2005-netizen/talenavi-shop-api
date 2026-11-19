@@ -1,0 +1,45 @@
+# Menjalankan API + PostgreSQL dengan satu perintah:  docker compose up --build
+#
+# Dua service dalam satu jaringan internal Docker:
+#   db  -> PostgreSQL 16 (data disimpan di volume, tidak hilang saat container dihapus)
+#   app -> API, terhubung ke db memakai nama service "db" sebagai host
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: talenavi_shop
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Port database sengaja TIDAK dibuka ke laptop: hanya app yang perlu mengaksesnya
+    # (juga menghindari bentrok dengan PostgreSQL lokal di port 5432).
+    healthcheck:
+      # app baru dijalankan setelah database benar-benar siap menerima koneksi
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d talenavi_shop']
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db # nama service di atas = hostname di jaringan Docker
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: talenavi_shop
+      # Diambil dari file .env di folder project (Compose membacanya otomatis).
+      # Kalau kosong, compose berhenti dengan pesan ini.
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET belum diisi di file .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+    ports:
+      # Port laptop bisa diganti tanpa mengubah file ini: APP_PORT=3001 docker compose up
+      - '${APP_PORT:-3000}:3000'
+    restart: unless-stopped
+
+volumes:
+  pgdata:

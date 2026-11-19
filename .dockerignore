@@ -1,0 +1,19 @@
+# File yang TIDAK ikut dikirim ke Docker saat build.
+# node_modules diinstall ulang di dalam image (versi Linux), .env berisi secret.
+node_modules
+.env
+.git
+.gitignore
+.history
+.postman
+postman
+docs
+tests
+coverage
+logs
+*.log
+*.md
+Untitled.txt
+Dockerfile
+docker-compose.yml
+.dockerignore

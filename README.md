@@ -14,14 +14,15 @@ Mencakup autentikasi user, katalog produk (pagination, search, filter, sort), ke
 5. [Setup Database](#setup-database)
 6. [Migration & Seeder](#migration--seeder)
 7. [Menjalankan Aplikasi](#menjalankan-aplikasi)
-8. [Dokumentasi API (Postman)](#dokumentasi-api-postman)
-9. [Daftar Endpoint](#daftar-endpoint)
-10. [Desain Database](#desain-database)
-11. [Logic Checkout](#logic-checkout)
-12. [Testing](#testing)
-13. [Struktur Project](#struktur-project)
-14. [Keamanan](#keamanan)
-15. [Format Response](#format-response)
+8. [Menjalankan dengan Docker (opsional)](#menjalankan-dengan-docker-opsional)
+9. [Dokumentasi API (Postman)](#dokumentasi-api-postman)
+10. [Daftar Endpoint](#daftar-endpoint)
+11. [Desain Database](#desain-database)
+12. [Logic Checkout](#logic-checkout)
+13. [Testing](#testing)
+14. [Struktur Project](#struktur-project)
+15. [Keamanan](#keamanan)
+16. [Format Response](#format-response)
 
 ---
 
@@ -38,6 +39,8 @@ Mencakup autentikasi user, katalog produk (pagination, search, filter, sort), ke
 | Keamanan | `helmet`, `cors`, `express-rate-limit` |
 | Logging | `morgan` |
 | Dokumentasi API | Postman Collection + Environment |
+| Testing | `node:test` + `supertest` (integration test) |
+| Container (opsional) | Docker + Docker Compose |
 
 ## Alasan Pemilihan Stack & Database
 
@@ -141,6 +144,31 @@ Server berjalan di `http://localhost:3000`. Cek kesehatan server dan koneksi dat
 ```bash
 curl http://localhost:3000/api/health
 ```
+
+## Menjalankan dengan Docker (opsional)
+
+Alternatif tanpa memasang PostgreSQL di laptop. Yang dibutuhkan hanya [Docker Desktop](https://www.docker.com/products/docker-desktop/) dan file `.env` berisi `JWT_SECRET` (lihat [Cara Install](#cara-install)).
+
+```bash
+docker compose up -d --build
+```
+
+Perintah ini menjalankan dua container:
+
+| Service | Isi |
+|---|---|
+| `db` | PostgreSQL 16. Data disimpan di volume `pgdata`; port database tidak dibuka ke host. |
+| `app` | API. Baru dijalankan setelah `db` sehat (healthcheck), lalu otomatis menjalankan migration → seeder → server. |
+
+API tersedia di `http://localhost:3000` (cek: `/api/health`). Jika port 3000 sedang dipakai, pilih port lain dengan env `APP_PORT`, mis. `APP_PORT=3001 docker compose up -d` (PowerShell: `$env:APP_PORT=3001; docker compose up -d`), lalu ubah `base_url` di environment Postman.
+
+| Perintah | Fungsi |
+|---|---|
+| `docker compose logs -f app` | Melihat log aplikasi |
+| `docker compose down` | Menghentikan container (data database tetap tersimpan) |
+| `docker compose down -v` | Menghentikan container **dan menghapus data** (database kembali bersih saat dijalankan lagi) |
+
+Migration aman dijalankan di setiap start (hanya file yang belum pernah jalan), dan seeder idempotent serta tidak menimpa stok.
 
 ## Dokumentasi API (Postman)
 
@@ -353,6 +381,8 @@ tests/
 ├── setup-test-db.js     # create → reset → migrate → seed database test
 ├── checkout.test.js     # Integration test checkout
 └── admin-products.test.js # Integration test CRUD produk admin
+Dockerfile               # Image aplikasi (node:24-slim, non-root)
+docker-compose.yml       # app + PostgreSQL
 ```
 
 Alur request: `routes → middlewares → controller → service → repository → database`. Controller tidak menulis SQL, repository tidak mengetahui HTTP.
