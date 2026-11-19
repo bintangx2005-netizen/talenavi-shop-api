@@ -13,4 +13,22 @@ const idParamSchema = z.object({
     .max(PG_INT_MAX, 'ID is out of range'),
 });
 
-module.exports = { idParamSchema, PG_INT_MAX };
+// Field pagination yang dipakai bersama (list produk, riwayat order).
+// Query string selalu berupa string, jadi angka di-coerce (diubah) ke number.
+const paginationShape = {
+  page: z.coerce
+    .number({ error: 'Page must be a number' })
+    .int('Page must be an integer')
+    .min(1, 'Page must be at least 1')
+    .default(1),
+  limit: z.coerce
+    .number({ error: 'Limit must be a number' })
+    .int('Limit must be an integer')
+    .min(1, 'Limit must be at least 1')
+    .max(50, 'Limit must be at most 50')
+    .default(10),
+};
+
+const paginationQuerySchema = z.object(paginationShape);
+
+module.exports = { idParamSchema, paginationShape, paginationQuerySchema, PG_INT_MAX };

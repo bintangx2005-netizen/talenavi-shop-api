@@ -88,7 +88,32 @@ async function deleteByIdForUser(id, userId) {
   return rowCount > 0;
 }
 
+// ---- Dipakai saat checkout (di dalam transaction, `db` = client transaksi) ----
+
+/**
+ * Mengambil isi cart sekaligus MENGUNCI barisnya (FOR UPDATE).
+ * Kalau user yang sama menekan checkout dua kali bersamaan, request kedua
+ * menunggu sampai yang pertama selesai, lalu melihat cart yang sudah kosong.
+ */
+async function findForCheckout(userId, db = pool) {
+  const { rows } = await db.query(
+    `SELECT id, product_id, quantity
+     FROM cart_items
+     WHERE user_id = $1
+     ORDER BY product_id
+     FOR UPDATE`,
+    [userId],
+  );
+  return rows;
+}
+
+async function clearByUser(userId, db = pool) {
+  await db.query('DELETE FROM cart_items WHERE user_id = $1', [userId]);
+}
+
 module.exports = {
+  findForCheckout,
+  clearByUser,
   findAllByUser,
   findByIdForUser,
   findByUserAndProduct,

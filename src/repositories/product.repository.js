@@ -100,4 +100,31 @@ async function findById(id) {
   return rows[0] ? toProduct(rows[0]) : null;
 }
 
-module.exports = { findAll, findById };
+// ---- Dipakai saat checkout (di dalam transaction, `db` = client transaksi) ----
+
+/**
+ * Mengambil produk sekaligus MENGUNCI barisnya (row lock / pessimistic locking).
+ * Transaksi checkout lain yang ingin mengunci produk yang sama harus MENUNGGU
+ * sampai transaksi ini COMMIT/ROLLBACK, lalu membaca stok terbaru.
+ * -> dua checkout bersamaan tidak bisa sama-sama "melihat" stok lama, stok tidak minus.
+ *
+ * ORDER BY id: semua transaksi mengunci dengan urutan yang sama, mencegah deadlock
+ * (A mengunci produk 1 lalu menunggu 2, sementara B mengunci 2 lalu menunggu 1).
+ */
+async function findByIdsForUpdate(ids, db = pool) {
+  const { rows } = await db.query(
+    `SELECT id, title, price, stock
+     FROM products
+     WHERE id = ANY($1::int[])
+     ORDER BY id
+     FOR UPDATE`,
+    [ids],
+  );
+  return rows;
+}
+
+async function decrementStock(id, quantity, db = pool) {
+  await db.query('UPDATE products SET stock = stock - $1 WHERE id = $2', [quantity, id]);
+}
+
+module.exports = { findAll, findById, findByIdsForUpdate, decrementStock };
