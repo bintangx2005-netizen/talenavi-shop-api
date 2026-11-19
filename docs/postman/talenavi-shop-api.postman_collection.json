@@ -1,0 +1,2079 @@
+{
+  "info": {
+    "name": "Talenavi Shop API",
+    "description": "REST API Product Catalog & Order (Talenavi Backend Intern Technical Test).\n\n## Cara pakai\n1. Import collection ini **dan** environment `Talenavi Shop API - Local`, lalu pilih environment tersebut di kanan atas Postman.\n2. Pastikan server berjalan (`npm run dev`) di `http://localhost:3000` (ubah `base_url` di environment jika port berbeda).\n3. Jalankan **Auth → Login**. Token otomatis disimpan ke variable `{{token}}` dan dipakai oleh semua endpoint yang butuh login.\n\n## Alur demo\nRegister → Login → List Products → Product Detail → Add to Cart → Get Cart → Checkout → Order History → Order Detail\n\n## Format response\nSukses: `{ \"success\": true, \"message\": \"...\", \"data\": ..., \"meta\"?: { page, limit, total, total_pages } }`\n\nError: `{ \"success\": false, \"message\": \"...\", \"errors\"?: { \"field\": [\"pesan\"] } }`\n\n## Akun test (dari seeder)\n- `user@example.com` / `password123` (customer)\n- `admin@example.com` / `admin12345` (admin)\n\nSetiap request memiliki contoh response sukses dan error (lihat dropdown **Examples**).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Registrasi, login (JWT), dan data user yang sedang login.",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('register_email', `demo${Date.now()}@example.com`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.environment.set('email', pm.environment.get('register_email'));",
+                  "  pm.environment.set('password', 'password123');",
+                  "}",
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Demo User\",\n  \"email\": \"{{register_email}}\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Registrasi user baru.\n\n**Body**\n| Field | Tipe | Aturan |\n|---|---|---|\n| name | string | wajib, 2–100 karakter |\n| email | string | wajib, format email valid, unik (tidak case-sensitive) |\n| password | string | wajib, 8–72 karakter (disimpan sebagai hash bcrypt) |\n\nPre-request script membuat email acak (`{{register_email}}`) agar request ini bisa dijalankan berulang. Jika sukses, email & password disimpan ke `{{email}}`/`{{password}}` sehingga **Login** langsung memakai akun baru ini.\n\n**Response:** 201 Created, 409 email sudah terdaftar, 422 validasi gagal."
+          },
+          "response": [
+            {
+              "name": "201 Created - registered",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "register"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Budi Santoso\",\n  \"email\": \"budi@example.com\",\n  \"password\": \"rahasia123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"User registered successfully\",\n  \"data\": {\n    \"id\": 3,\n    \"name\": \"Budi Santoso\",\n    \"email\": \"budi@example.com\",\n    \"role\": \"customer\",\n    \"created_at\": \"2026-11-19T02:10:50.292Z\"\n  }\n}"
+            },
+            {
+              "name": "409 Conflict - email already registered",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "register"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Budi Santoso\",\n  \"email\": \"budi@example.com\",\n  \"password\": \"rahasia123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Email is already registered\",\n  \"errors\": {\n    \"email\": [\n      \"Email is already registered\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "422 Validation failed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "register"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"\",\n  \"email\": \"bukan-email\",\n  \"password\": \"123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": {\n    \"name\": [\n      \"Name must be at least 2 characters\"\n    ],\n    \"email\": [\n      \"Invalid email format\"\n    ],\n    \"password\": [\n      \"Password must be at least 8 characters\"\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.environment.set('token', pm.response.json().data.access_token);",
+                  "}",
+                  "pm.test('Status 200 OK & token saved', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.environment.get('token')).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Login dan mendapatkan JWT (berlaku sesuai `JWT_EXPIRES_IN`, default 1 hari).\n\n**Body**\n| Field | Tipe | Aturan |\n|---|---|---|\n| email | string | wajib, format email |\n| password | string | wajib |\n\nTest script otomatis menyimpan `access_token` ke variable `{{token}}`.\n\nDibatasi **10 percobaan / 15 menit per IP** (rate limit) → 429.\n\n**Response:** 200 OK, 401 email/password salah, 422 validasi gagal, 429 terlalu banyak percobaan."
+          },
+          "response": [
+            {
+              "name": "200 OK - login successful",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6ImN1c3RvbWVyIiwiaWF0IjoxNzk1MDU0MjUwLCJleHAiOjE3OTUxNDA2NTB9.m_0AnAKQSumHoLJkrvARwLeNQUNPKQAHw4hcmJcZ-Fo\",\n    \"token_type\": \"Bearer\",\n    \"expires_in\": \"1d\",\n    \"user\": {\n      \"id\": 1,\n      \"name\": \"Test User\",\n      \"email\": \"user@example.com\",\n      \"role\": \"customer\",\n      \"created_at\": \"2026-11-19T02:10:49.138Z\"\n    }\n  }\n}"
+            },
+            {
+              "name": "401 Unauthorized - wrong email or password",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"salahpassword\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid email or password\"\n}"
+            },
+            {
+              "name": "422 Validation failed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"bukan-email\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": {\n    \"email\": [\n      \"Invalid email format\"\n    ],\n    \"password\": [\n      \"Password is required\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "429 Too Many Requests - rate limit",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"salahpassword\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Too Many Requests",
+              "code": 429,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Too many login attempts, please try again in 15 minutes\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "🔒 **Wajib token.** Data user yang sedang login.\n\n**Response:** 200 OK, 401 token tidak ada / tidak valid / kedaluwarsa."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/me",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "me"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OK\",\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Test User\",\n    \"email\": \"user@example.com\",\n    \"role\": \"customer\",\n    \"created_at\": \"2026-11-19T02:10:49.138Z\"\n  }\n}"
+            },
+            {
+              "name": "401 Unauthorized - token missing",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/me",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "me"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Authentication token is missing\"\n}"
+            },
+            {
+              "name": "401 Unauthorized - invalid token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer invalid.token.value"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/me",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "me"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Authentication token is missing\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "description": "Katalog produk dan kategori (public, tanpa login).",
+      "auth": {
+        "type": "noauth"
+      },
+      "item": [
+        {
+          "name": "List Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/products?page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Nomor halaman (default 1, min 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Jumlah per halaman (default 10, maks 50)"
+                },
+                {
+                  "key": "q",
+                  "value": "phone",
+                  "description": "Cari berdasarkan judul produk (tidak case-sensitive)",
+                  "disabled": true
+                },
+                {
+                  "key": "category",
+                  "value": "smartphones",
+                  "description": "Filter slug kategori (lihat GET /api/categories)",
+                  "disabled": true
+                },
+                {
+                  "key": "sort",
+                  "value": "price_asc",
+                  "description": "price_asc | price_desc | newest (default newest)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List produk dengan pagination, search, filter kategori, dan sorting. Semua parameter boleh dikombinasikan. Aktifkan/nonaktifkan parameter di tab **Params**.\n\n**Query params**\n| Param | Default | Keterangan |\n|---|---|---|\n| page | 1 | min 1 |\n| limit | 10 | 1–50 |\n| q | – | pencarian judul |\n| category | – | slug kategori |\n| sort | newest | `price_asc`, `price_desc`, `newest` |\n\n`meta` berisi `page`, `limit`, `total`, `total_pages`.\n\n**Response:** 200 OK, 422 parameter tidak valid."
+          },
+          "response": [
+            {
+              "name": "200 OK - default (page 1, limit 3)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/products?page=1&limit=3",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "3"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OK\",\n  \"data\": [\n    {\n      \"id\": 30,\n      \"sku\": \"HA-006\",\n      \"title\": \"Dispenser Galon Bawah\",\n      \"description\": \"Dispenser air panas, dingin, dan normal dengan galon bawah.\",\n      \"price\": 1599000,\n      \"stock\": 9,\n      \"image_url\": \"https://picsum.photos/seed/ha-006/600/400\",\n      \"created_at\": \"2026-11-19T02:10:49.138Z\",\n      \"category\": {\n        \"id\": 5,\n        \"slug\": \"home-appliances\",\n        \"name\": \"Home Appliances\"\n      }\n    },\n    {\n      \"id\": 29,\n      \"sku\": \"HA-005\",\n      \"title\": \"Kipas Angin Berdiri\",\n      \"description\": \"Kipas angin 16 inci dengan remote dan timer.\",\n      \"price\": 429000,\n      \"stock\": 24,\n      \"image_url\": \"https://picsum.photos/seed/ha-005/600/400\",\n      \"created_at\": \"2026-11-19T02:10:49.138Z\",\n      \"category\": {\n        \"id\": 5,\n        \"slug\": \"home-appliances\",\n        \"name\": \"Home Appliances\"\n      }\n    },\n    {\n      \"id\": 28,\n      \"sku\": \"HA-004\",\n      \"title\": \"Vacuum Cleaner Cordless\",\n      \"description\": \"Penyedot debu tanpa kabel, baterai 40 menit.\",\n      \"price\": 1799000,\n      \"stock\": 11,\n      \"image_url\": \"https://picsum.photos/seed/ha-004/600/400\",\n      \"created_at\": \"2026-11-19T02:10:49.138Z\",\n      \"category\": {\n        \"id\": 5,\n        \"slug\": \"home-appliances\",\n        \"name\": \"Home Appliances\"\n      }\n    }\n  ],\n  \"meta\": {\n    \"page\": 1,\n    \"limit\": 3,\n    \"total\": 30,\n    \"total_pages\": 10\n  }\n}"
+            },
+            {
+              "name": "200 OK - search + filter + sort",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/products?q=phone&category=smartphones&sort=price_asc&page=1&limit=10",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products"
+                  ],
+                  "query": [
+                    {
+                      "key": "q",
+                      "value": "phone"
+                    },
+                    {
+                      "key": "category",
+                      "value": "smartphones"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "price_asc"
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OK\",\n  \"data\": [\n    {\n      \"id\": 5,\n      \"sku\": \"SP-005\",\n      \"title\": \"Kirana Mini Phone\",\n      \"description\": \"Smartphone ringkas 5.8 inci, cocok untuk satu tangan.\",\n      \"price\": 2199000,\n      \"stock\": 30,\n      \"image_url\": \"https://picsum.photos/seed/sp-005/600/400\",\n      \"created_at\": \"2026-11-19T02:10:49.138Z\",\n      \"category\": {\n        \"id\": 1,\n        \"slug\": \"smartphones\",\n        \"name\": \"Smartphones\"\n      }\n    },\n    {\n      \"id\": 1,\n      \"sku\": \"SP-001\",\n      \"title\": \"Nusa Phone X1\",\n      \"description\": \"Smartphone 6.5 inci, RAM 8GB, storage 128GB, kamera 50MP.\",\n      \"price\": 3499000,\n      \"stock\": 25,\n      \"image_url\": \"https://picsum.photos/seed/sp-001/600/400\",\n      \"created_at\": \"2026-11-19T02:10:49.138Z\",\n      \"category\": {\n        \"id\": 1,\n        \"slug\": \"smartphones\",\n        \"name\": \"Smartphones\"\n      }\n    },\n    {\n      \"id\": 2,\n      \"sku\": \"SP-002\",\n      \"title\": \"Nusa Phone X1 Pro\",\n      \"description\": \"Layar AMOLED 120Hz, RAM 12GB, storage 256GB, baterai 5000mAh.\",\n      \"price\": 5999000,\n      \"stock\": 15,\n      \"image_url\": \"https://picsum.photos/seed/sp-002/600/400\",\n      \"created_at\": \"2026-11-19T02:10:49.138Z\",\n      \"category\": {\n        \"id\": 1,\n        \"slug\": \"smartphones\",\n        \"name\": \"Smartphones\"\n      }\n    }\n  ],\n  \"meta\": {\n    \"page\": 1,\n    \"limit\": 10,\n    \"total\": 3,\n    \"total_pages\": 1\n  }\n}"
+            },
+            {
+              "name": "422 Validation failed - invalid query",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/products?page=0&limit=100&sort=cheapest",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "0"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "100"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "cheapest"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": {\n    \"page\": [\n      \"Page must be at least 1\"\n    ],\n    \"limit\": [\n      \"Limit must be at most 50\"\n    ],\n    \"sort\": [\n      \"Sort must be one of: price_asc, price_desc, newest\"\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Product Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/products/{{product_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{product_id}}"
+              ]
+            },
+            "description": "Detail satu produk beserta kategorinya.\n\n**Path param:** `id` (integer positif)\n\n**Response:** 200 OK, 404 produk tidak ditemukan, 422 id tidak valid."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/products/1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products",
+                    "1"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OK\",\n  \"data\": {\n    \"id\": 1,\n    \"sku\": \"SP-001\",\n    \"title\": \"Nusa Phone X1\",\n    \"description\": \"Smartphone 6.5 inci, RAM 8GB, storage 128GB, kamera 50MP.\",\n    \"price\": 3499000,\n    \"stock\": 25,\n    \"image_url\": \"https://picsum.photos/seed/sp-001/600/400\",\n    \"created_at\": \"2026-11-19T02:10:49.138Z\",\n    \"category\": {\n      \"id\": 1,\n      \"slug\": \"smartphones\",\n      \"name\": \"Smartphones\"\n    }\n  }\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/products/9999",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products",
+                    "9999"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Product not found\"\n}"
+            },
+            {
+              "name": "422 Validation failed - invalid id",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/products/abc",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products",
+                    "abc"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": {\n    \"id\": [\n      \"ID must be a number\"\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "List Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "categories"
+              ]
+            },
+            "description": "Daftar kategori beserta jumlah produknya. Gunakan `slug` untuk filter `category` di List Products.\n\n**Response:** 200 OK."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/categories",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "categories"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OK\",\n  \"data\": [\n    {\n      \"id\": 3,\n      \"slug\": \"audio\",\n      \"name\": \"Audio\",\n      \"product_count\": 6\n    },\n    {\n      \"id\": 4,\n      \"slug\": \"fashion\",\n      \"name\": \"Fashion\",\n      \"product_count\": 6\n    },\n    {\n      \"id\": 5,\n      \"slug\": \"home-appliances\",\n      \"name\": \"Home Appliances\",\n      \"product_count\": 6\n    },\n    {\n      \"id\": 2,\n      \"slug\": \"laptops\",\n      \"name\": \"Laptops\",\n      \"product_count\": 6\n    },\n    {\n      \"id\": 1,\n      \"slug\": \"smartphones\",\n      \"name\": \"Smartphones\",\n      \"product_count\": 6\n    }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cart",
+      "description": "🔒 Keranjang belanja user yang sedang login (wajib token). User hanya bisa mengakses item miliknya sendiri; item milik user lain dianggap tidak ada (404).",
+      "item": [
+        {
+          "name": "Get Cart",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/cart",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cart"
+              ]
+            },
+            "description": "🔒 Isi keranjang beserta `subtotal` per item, `total_items`, `total_quantity`, dan `total_price`.\n\n`is_stock_sufficient` bernilai `false` jika stok produk turun di bawah quantity di cart (mis. sudah dibeli user lain).\n\n**Response:** 200 OK, 401 tanpa token."
+          },
+          "response": [
+            {
+              "name": "401 Unauthorized - token missing",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/cart",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Authentication token is missing\"\n}"
+            },
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/cart",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OK\",\n  \"data\": {\n    \"items\": [\n      {\n        \"id\": 1,\n        \"product_id\": 1,\n        \"quantity\": 3,\n        \"created_at\": \"2026-11-19T02:10:50.544Z\",\n        \"product\": {\n          \"id\": 1,\n          \"title\": \"Nusa Phone X1\",\n          \"price\": 3499000,\n          \"stock\": 25,\n          \"image_url\": \"https://picsum.photos/seed/sp-001/600/400\"\n        },\n        \"subtotal\": 10497000,\n        \"is_stock_sufficient\": true\n      },\n      {\n        \"id\": 3,\n        \"product_id\": 6,\n        \"quantity\": 2,\n        \"created_at\": \"2026-11-19T02:10:50.561Z\",\n        \"product\": {\n          \"id\": 6,\n          \"title\": \"Kirana Fold\",\n          \"price\": 19999000,\n          \"stock\": 2,\n          \"image_url\": \"https://picsum.photos/seed/sp-006/600/400\"\n        },\n        \"subtotal\": 39998000,\n        \"is_stock_sufficient\": true\n      }\n    ],\n    \"total_items\": 2,\n    \"total_quantity\": 5,\n    \"total_price\": 50495000\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Add Item to Cart",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if ([200, 201].includes(pm.response.code)) {",
+                  "  pm.environment.set('cart_item_id', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cart/items",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cart",
+                "items"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": {{product_id}},\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "🔒 Tambah produk ke keranjang. Jika produk sudah ada di keranjang, **quantity ditambahkan** ke item yang sama (tidak membuat baris baru).\n\n**Body**\n| Field | Tipe | Aturan |\n|---|---|---|\n| product_id | integer | wajib, produk harus ada |\n| quantity | integer | wajib, min 1; total quantity di cart tidak boleh melebihi stok |\n\nTest script menyimpan id item ke `{{cart_item_id}}`.\n\n**Response:** 201 item baru, 200 quantity item yang sudah ada bertambah, 404 produk tidak ada, 422 validasi gagal / melebihi stok."
+          },
+          "response": [
+            {
+              "name": "201 Created - new item",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart/items",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart",
+                    "items"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"product_id\": 1,\n  \"quantity\": 2\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Item added to cart\",\n  \"data\": {\n    \"id\": 1,\n    \"product_id\": 1,\n    \"quantity\": 2,\n    \"created_at\": \"2026-11-19T02:10:50.544Z\",\n    \"product\": {\n      \"id\": 1,\n      \"title\": \"Nusa Phone X1\",\n      \"price\": 3499000,\n      \"stock\": 25,\n      \"image_url\": \"https://picsum.photos/seed/sp-001/600/400\"\n    },\n    \"subtotal\": 6998000,\n    \"is_stock_sufficient\": true\n  }\n}"
+            },
+            {
+              "name": "200 OK - same product added again (quantity increased)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart/items",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart",
+                    "items"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"product_id\": 1,\n  \"quantity\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Item quantity updated\",\n  \"data\": {\n    \"id\": 1,\n    \"product_id\": 1,\n    \"quantity\": 3,\n    \"created_at\": \"2026-11-19T02:10:50.544Z\",\n    \"product\": {\n      \"id\": 1,\n      \"title\": \"Nusa Phone X1\",\n      \"price\": 3499000,\n      \"stock\": 25,\n      \"image_url\": \"https://picsum.photos/seed/sp-001/600/400\"\n    },\n    \"subtotal\": 10497000,\n    \"is_stock_sufficient\": true\n  }\n}"
+            },
+            {
+              "name": "422 Validation failed - quantity exceeds stock",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart/items",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart",
+                    "items"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"product_id\": 6,\n  \"quantity\": 3\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": {\n    \"quantity\": [\n      \"Quantity exceeds available stock (2).\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "422 Validation failed - invalid body",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart/items",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart",
+                    "items"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"product_id\": \"1\",\n  \"quantity\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": {\n    \"product_id\": [\n      \"Product ID must be a number\"\n    ],\n    \"quantity\": [\n      \"Quantity must be at least 1\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "404 Not Found - product does not exist",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart/items",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart",
+                    "items"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"product_id\": 9999,\n  \"quantity\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Product not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Cart Item Quantity",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cart/items/{{cart_item_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cart",
+                "items",
+                "{{cart_item_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "🔒 Mengubah quantity item (nilai baru, bukan penambahan).\n\n**Path param:** `id` = id cart item\n\n**Body**\n| Field | Tipe | Aturan |\n|---|---|---|\n| quantity | integer | wajib, min 1, tidak boleh melebihi stok |\n\nUntuk menghapus item gunakan DELETE.\n\n**Response:** 200 OK, 404 item tidak ada / milik user lain, 422 validasi gagal / melebihi stok."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart/items/1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart",
+                    "items",
+                    "1"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"quantity\": 3\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Cart item updated\",\n  \"data\": {\n    \"id\": 1,\n    \"product_id\": 1,\n    \"quantity\": 3,\n    \"created_at\": \"2026-11-19T02:10:50.544Z\",\n    \"product\": {\n      \"id\": 1,\n      \"title\": \"Nusa Phone X1\",\n      \"price\": 3499000,\n      \"stock\": 25,\n      \"image_url\": \"https://picsum.photos/seed/sp-001/600/400\"\n    },\n    \"subtotal\": 10497000,\n    \"is_stock_sufficient\": true\n  }\n}"
+            },
+            {
+              "name": "422 Validation failed - quantity exceeds stock",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart/items/1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart",
+                    "items",
+                    "1"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"quantity\": 999\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": {\n    \"quantity\": [\n      \"Quantity exceeds available stock (25).\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "404 Not Found - item not found or owned by another user",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart/items/1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart",
+                    "items",
+                    "1"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"quantity\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Cart item not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Remove Cart Item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/cart/items/{{cart_item_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cart",
+                "items",
+                "{{cart_item_id}}"
+              ]
+            },
+            "description": "🔒 Menghapus item dari keranjang.\n\n**Path param:** `id` = id cart item\n\n**Response:** 200 OK, 404 item tidak ada / milik user lain."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/cart/items/4",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart",
+                    "items",
+                    "4"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Cart item removed\",\n  \"data\": null\n}"
+            },
+            {
+              "name": "404 Not Found - item not found or owned by another user",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/cart/items/4",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart",
+                    "items",
+                    "4"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Cart item not found\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "description": "🔒 Checkout dan riwayat order (wajib token).\n\n> Pastikan keranjang berisi item (jalankan **Cart → Add Item to Cart**) sebelum **Checkout**. Jika menjalankan seluruh collection berurutan, request **Remove Cart Item** akan mengosongkan keranjang sehingga Checkout mengembalikan 422 (keranjang kosong) — perilaku yang memang diharapkan.",
+      "item": [
+        {
+          "name": "Checkout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.environment.set('order_id', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "🔒 Checkout **seluruh isi keranjang** menjadi order. Tidak perlu body.\n\nDijalankan dalam **satu database transaction**:\n1. Kunci isi cart → gagal jika kosong (422)\n2. Kunci baris produk (`SELECT ... FOR UPDATE`) agar checkout bersamaan tidak membuat stok minus\n3. Cek stok semua item → gagal jika ada yang kurang (409), response menyebutkan produk mana saja\n4. Buat `orders` + `order_items` (harga disimpan sesuai harga saat checkout)\n5. Kurangi stok produk\n6. Kosongkan keranjang\n\nJika satu langkah gagal → ROLLBACK, tidak ada data yang berubah.\n\nTest script menyimpan id order ke `{{order_id}}`.\n\n**Response:** 201 Created, 401 tanpa token, 409 stok tidak mencukupi, 422 keranjang kosong."
+          },
+          "response": [
+            {
+              "name": "409 Conflict - insufficient stock",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/orders",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "orders"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Insufficient stock for some products\",\n  \"errors\": {\n    \"stock\": [\n      \"\\\"Kirana Fold\\\" (product_id 6): requested 2, available 1\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "201 Created - checkout successful",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/orders",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "orders"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Checkout successful\",\n  \"data\": {\n    \"id\": 1,\n    \"user_id\": 1,\n    \"total_price\": 50495000,\n    \"status\": \"pending\",\n    \"created_at\": \"2026-11-19T02:10:50.595Z\",\n    \"items\": [\n      {\n        \"id\": 1,\n        \"product_id\": 1,\n        \"product_title\": \"Nusa Phone X1\",\n        \"quantity\": 3,\n        \"price\": 3499000,\n        \"subtotal\": 10497000\n      },\n      {\n        \"id\": 2,\n        \"product_id\": 6,\n        \"product_title\": \"Kirana Fold\",\n        \"quantity\": 2,\n        \"price\": 19999000,\n        \"subtotal\": 39998000\n      }\n    ]\n  }\n}"
+            },
+            {
+              "name": "422 Validation failed - cart is empty",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/orders",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "orders"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Cart is empty\",\n  \"errors\": {\n    \"cart\": [\n      \"Your cart is empty\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "401 Unauthorized - token missing",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/orders",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "orders"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Authentication token is missing\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Order History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders?page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Nomor halaman (default 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Jumlah per halaman (default 10, maks 50)"
+                }
+              ]
+            },
+            "description": "🔒 Riwayat order milik user yang login, terbaru dulu, dengan pagination.\n\n**Response:** 200 OK, 401 tanpa token, 422 parameter tidak valid."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/orders",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "orders"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OK\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"total_price\": 50495000,\n      \"status\": \"pending\",\n      \"created_at\": \"2026-11-19T02:10:50.595Z\",\n      \"total_items\": 2,\n      \"total_quantity\": 5\n    }\n  ],\n  \"meta\": {\n    \"page\": 1,\n    \"limit\": 10,\n    \"total\": 1,\n    \"total_pages\": 1\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Order Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders/{{order_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{order_id}}"
+              ]
+            },
+            "description": "🔒 Detail order beserta item-itemnya. `price` adalah harga saat checkout (tidak berubah walau harga produk diubah).\n\n**Path param:** `id` = id order\n\n**Response:** 200 OK, 404 order tidak ada / milik user lain."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/orders/1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "orders",
+                    "1"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OK\",\n  \"data\": {\n    \"id\": 1,\n    \"user_id\": 1,\n    \"total_price\": 50495000,\n    \"status\": \"pending\",\n    \"created_at\": \"2026-11-19T02:10:50.595Z\",\n    \"items\": [\n      {\n        \"id\": 1,\n        \"product_id\": 1,\n        \"product_title\": \"Nusa Phone X1\",\n        \"quantity\": 3,\n        \"price\": 3499000,\n        \"subtotal\": 10497000\n      },\n      {\n        \"id\": 2,\n        \"product_id\": 6,\n        \"product_title\": \"Kirana Fold\",\n        \"quantity\": 2,\n        \"price\": 19999000,\n        \"subtotal\": 39998000\n      }\n    ]\n  }\n}"
+            },
+            {
+              "name": "404 Not Found - order not found or owned by another user",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/orders/1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "orders",
+                    "1"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Order not found\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "auth": {
+        "type": "noauth"
+      },
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            },
+            "description": "Mengecek server dan koneksi database.\n\n**Response:** 200 OK."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/health",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "health"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Service is healthy\",\n  \"data\": {\n    \"database\": \"connected\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
