@@ -2422,7 +2422,7 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/cart/items/{{cart_item_id}}",
+              "raw": "{{base_url}}/api/cart/items/{{remove_cart_item_id}}",
               "host": [
                 "{{base_url}}"
               ],
@@ -2430,10 +2430,10 @@
                 "api",
                 "cart",
                 "items",
-                "{{cart_item_id}}"
+                "{{remove_cart_item_id}}"
               ]
             },
-            "description": "🔒 Menghapus item dari keranjang.\n\n**Path param:** `id` = id cart item\n\n**Response:** 200 OK, 404 item tidak ada / milik user lain."
+            "description": "🔒 Menghapus item dari keranjang.\n\n**Path param:** `id` = id cart item\n\n**Catatan demo:** pre-request script request ini lebih dulu menambahkan produk lain (`{{remove_product_id}}`, default 2) ke keranjang, lalu item tersebut yang dihapus (`{{remove_cart_item_id}}`). Produk dari *Add Item to Cart* tetap di keranjang, sehingga *Checkout* bisa langsung dicoba setelahnya. Untuk menghapus item lain, ganti id di URL secara manual.\n\n**Response:** 200 OK, 404 item tidak ada / milik user lain."
           },
           "response": [
             {
@@ -2515,6 +2515,44 @@
               ],
               "cookie": [],
               "body": "{\n  \"success\": false,\n  \"message\": \"Cart item not found\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Tambahkan produk LAIN ({{remove_product_id}}) ke keranjang, lalu item itulah yang dihapus.",
+                  "// Dengan begitu produk utama ({{product_id}}) tetap di keranjang dan Checkout tetap bisa dicoba",
+                  "// (termasuk saat menjalankan seluruh collection dengan \"Run collection\").",
+                  "pm.sendRequest({",
+                  "  url: pm.variables.get('base_url') + '/api/cart/items',",
+                  "  method: 'POST',",
+                  "  header: {",
+                  "    'Content-Type': 'application/json',",
+                  "    Authorization: 'Bearer ' + pm.variables.get('token'),",
+                  "  },",
+                  "  body: {",
+                  "    mode: 'raw',",
+                  "    raw: JSON.stringify({ product_id: Number(pm.variables.get('remove_product_id')), quantity: 1 }),",
+                  "  },",
+                  "}, (err, res) => {",
+                  "  if (!err && [200, 201].includes(res.code)) {",
+                  "    pm.environment.set('remove_cart_item_id', res.json().data.id);",
+                  "  }",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
             }
           ]
         }
