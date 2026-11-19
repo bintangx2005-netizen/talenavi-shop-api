@@ -112,6 +112,47 @@ async function findById(id) {
   return rows[0] ? toProduct(rows[0]) : null;
 }
 
+// ---- Dipakai oleh endpoint admin (create / update / delete) ----
+
+// Daftar putih kolom yang boleh diubah lewat API. Nama kolom di SQL diambil dari
+// sini, BUKAN dari key body request, jadi client tidak bisa menyisipkan kolom lain.
+const WRITABLE_COLUMNS = ['category_id', 'sku', 'title', 'description', 'price', 'stock', 'image_url'];
+
+// INSERT lalu ambil ulang lewat findById supaya bentuk response sama dengan GET (ada kategori).
+async function create(data) {
+  const values = WRITABLE_COLUMNS.map((column) => data[column]);
+  const placeholders = values.map((_, i) => `$${i + 1}`).join(', '); // "$1, $2, ..., $7"
+
+  const { rows } = await pool.query(
+    `INSERT INTO products (${WRITABLE_COLUMNS.join(', ')})
+     VALUES (${placeholders})
+     RETURNING id`,
+    values,
+  );
+  return findById(rows[0].id);
+}
+
+// Partial update: hanya kolom yang dikirim yang di-SET.
+// Contoh body { price: 100, stock: 5 } -> "SET price = $1, stock = $2 WHERE id = $3"
+// Mengembalikan null kalau produk tidak ada.
+async function update(id, data) {
+  const columns = WRITABLE_COLUMNS.filter((column) => data[column] !== undefined);
+  const setClause = columns.map((column, i) => `${column} = $${i + 1}`).join(', ');
+  const values = columns.map((column) => data[column]);
+
+  const { rowCount } = await pool.query(
+    `UPDATE products SET ${setClause} WHERE id = $${columns.length + 1}`,
+    [...values, id],
+  );
+  return rowCount > 0 ? findById(id) : null;
+}
+
+// true kalau ada baris yang terhapus, false kalau produk tidak ada
+async function remove(id) {
+  const { rowCount } = await pool.query('DELETE FROM products WHERE id = $1', [id]);
+  return rowCount > 0;
+}
+
 // ---- Dipakai saat checkout (di dalam transaction, `db` = client transaksi) ----
 
 /**
@@ -143,4 +184,4 @@ async function decrementStock(id, quantity, db = pool) {
   await db.query('UPDATE products SET stock = stock - $1 WHERE id = $2', [quantity, id]);
 }
 
-module.exports = { findAll, findById, findByIdsForUpdate, decrementStock };
+module.exports = { findAll, findById, create, update, remove, findByIdsForUpdate, decrementStock };

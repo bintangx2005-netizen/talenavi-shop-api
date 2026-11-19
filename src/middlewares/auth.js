@@ -48,7 +48,9 @@ async function authenticate(req, res, next) {
  * Middleware pembatas role, dipakai SETELAH authenticate.
  * Contoh: router.post('/', authenticate, authorize('admin'), handler)
  */
-// Belum dipakai di endpoint mana pun (belum ada fitur khusus admin), disiapkan untuk admin CRUD.
+// Dipakai di product.routes.js untuk endpoint admin: authorize('admin').
+// role dibaca dari req.user (diambil ulang dari DATABASE oleh authenticate), bukan dari
+// token, jadi kalau role seseorang dicabut, aksesnya langsung hilang.
 function authorize(...allowedRoles) {
   return (req, res, next) => {
     if (!allowedRoles.includes(req.user?.role)) {

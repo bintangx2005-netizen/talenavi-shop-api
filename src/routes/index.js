@@ -17,7 +17,7 @@ router.get('/health', async (req, res) => {
 
 // Pembagian URL ke masing-masing file route (semua sudah diawali /api dari app.js):
 //   /api/auth/*        -> register, login, me
-//   /api/products/*    -> katalog (public)
+//   /api/products/*    -> katalog (GET public; POST/PATCH/DELETE khusus admin)
 //   /api/categories    -> daftar kategori (public)
 //   /api/cart/*        -> keranjang (wajib login)
 //   /api/orders/*      -> checkout & riwayat order (wajib login)

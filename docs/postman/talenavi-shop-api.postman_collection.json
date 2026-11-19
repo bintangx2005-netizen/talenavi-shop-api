@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Talenavi Shop API",
-    "description": "REST API Product Catalog & Order (Talenavi Backend Intern Technical Test).\n\n## Cara pakai\n1. Import collection ini **dan** environment `Talenavi Shop API - Local`, lalu pilih environment tersebut di kanan atas Postman.\n2. Pastikan server berjalan (`npm run dev`) di `http://localhost:3000` (ubah `base_url` di environment jika port berbeda).\n3. Jalankan **Auth → Login**. Token otomatis disimpan ke variable `{{token}}` dan dipakai oleh semua endpoint yang butuh login.\n\n## Alur demo\nRegister → Login → List Products → Product Detail → Add to Cart → Get Cart → Checkout → Order History → Order Detail\n\n## Format response\nSukses: `{ \"success\": true, \"message\": \"...\", \"data\": ..., \"meta\"?: { page, limit, total, total_pages } }`\n\nError: `{ \"success\": false, \"message\": \"...\", \"errors\"?: { \"field\": [\"pesan\"] } }`\n\n## Akun test (dari seeder)\n- `user@example.com` / `password123` (customer)\n- `admin@example.com` / `admin12345` (admin)\n\nSetiap request memiliki contoh response sukses dan error (lihat dropdown **Examples**).",
+    "description": "REST API Product Catalog & Order (Talenavi Backend Intern Technical Test).\n\n## Cara pakai\n1. Import collection ini **dan** environment `Talenavi Shop API - Local`, lalu pilih environment tersebut di kanan atas Postman.\n2. Pastikan server berjalan (`npm run dev`) di `http://localhost:3000` (ubah `base_url` di environment jika port berbeda).\n3. Jalankan **Auth → Login**. Token otomatis disimpan ke variable `{{token}}` dan dipakai oleh semua endpoint yang butuh login.\n\n## Admin\nJalankan **Auth → Login (Admin)**: token admin disimpan ke `{{admin_token}}` (terpisah dari `{{token}}` customer) dan dipakai folder **Admin - Products** (create, update, delete produk).\n\n## Alur demo\nRegister → Login → List Products → Product Detail → Add to Cart → Get Cart → Checkout → Order History → Order Detail\n\n## Format response\nSukses: `{ \"success\": true, \"message\": \"...\", \"data\": ..., \"meta\"?: { page, limit, total, total_pages } }`\n\nError: `{ \"success\": false, \"message\": \"...\", \"errors\"?: { \"field\": [\"pesan\"] } }`\n\n## Akun test (dari seeder)\n- `user@example.com` / `password123` (customer)\n- `admin@example.com` / `admin12345` (admin)\n\nSetiap request memiliki contoh response sukses dan error (lihat dropdown **Examples**).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -455,6 +455,108 @@
               ],
               "cookie": [],
               "body": "{\n  \"success\": false,\n  \"message\": \"Too many login attempts, please try again in 15 minutes\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.environment.set('admin_token', pm.response.json().data.access_token);",
+                  "}",
+                  "pm.test('Status 200 OK, role admin & admin_token saved', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().data.user.role).to.eql('admin');",
+                  "  pm.expect(pm.environment.get('admin_token')).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Endpoint login yang **sama** dengan Login biasa (`POST /api/auth/login`), hanya memakai akun admin dari seeder (`{{admin_email}}` / `{{admin_password}}`).\n\nYang membedakan admin dan customer adalah kolom `role` di tabel `users`, bukan endpoint-nya. Token disimpan ke variable terpisah `{{admin_token}}` dan dipakai folder **Admin - Products**, sehingga `{{token}}` (customer) tidak tertimpa."
+          },
+          "response": [
+            {
+              "name": "200 OK - admin login successful",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"admin12345\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzk1MDk2MzMwLCJleHAiOjE3OTUxODI3MzB9.uxxj_mtSLZKJihSy7UnM996_qLQDIAYKcqOGfWH3ohA\",\n    \"token_type\": \"Bearer\",\n    \"expires_in\": \"1d\",\n    \"user\": {\n      \"id\": 2,\n      \"name\": \"Admin\",\n      \"email\": \"admin@example.com\",\n      \"role\": \"admin\",\n      \"created_at\": \"2026-11-19T13:52:09.788Z\"\n    }\n  }\n}"
             }
           ]
         },
@@ -950,6 +1052,761 @@
               ],
               "cookie": [],
               "body": "{\n  \"success\": true,\n  \"message\": \"OK\",\n  \"data\": [\n    {\n      \"id\": 3,\n      \"slug\": \"audio\",\n      \"name\": \"Audio\",\n      \"product_count\": 6\n    },\n    {\n      \"id\": 4,\n      \"slug\": \"fashion\",\n      \"name\": \"Fashion\",\n      \"product_count\": 6\n    },\n    {\n      \"id\": 5,\n      \"slug\": \"home-appliances\",\n      \"name\": \"Home Appliances\",\n      \"product_count\": 6\n    },\n    {\n      \"id\": 2,\n      \"slug\": \"laptops\",\n      \"name\": \"Laptops\",\n      \"product_count\": 6\n    },\n    {\n      \"id\": 1,\n      \"slug\": \"smartphones\",\n      \"name\": \"Smartphones\",\n      \"product_count\": 6\n    }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin - Products",
+      "description": "Endpoint khusus **admin** (`authenticate` + `authorize('admin')`). Semua request di folder ini memakai `{{admin_token}}` dari **Auth → Login (Admin)**.\n\nTanpa token → 401. Login sebagai customer → 403. Urutan demo: Create → Update → Delete.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{admin_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Create Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.environment.set('admin_product_id', pm.response.json().data.id);",
+                  "}",
+                  "pm.test('Status 201 Created & admin_product_id saved', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/products",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_id\": 1,\n  \"sku\": \"DEMO-{{$timestamp}}\",\n  \"title\": \"Nusa Phone X2\",\n  \"description\": \"Smartphone 6.7 inci, RAM 12GB, storage 256GB.\",\n  \"price\": 4299000,\n  \"stock\": 20,\n  \"image_url\": \"https://example.com/images/nusa-phone-x2.jpg\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "**Khusus admin.** Membuat produk baru. Memakai `{{admin_token}}` (jalankan **Auth → Login (Admin)** dulu).\n\n**Body**\n| Field | Tipe | Aturan |\n|---|---|---|\n| category_id | integer | wajib, kategori harus ada |\n| sku | string | wajib, unik, huruf/angka/strip, maks 50, otomatis huruf besar |\n| title | string | wajib, maks 200 |\n| description | string | opsional (default `\"\"`) |\n| price | integer | wajib, Rupiah, ≥ 0 |\n| stock | integer | wajib, ≥ 0 |\n| image_url | string/null | opsional, URL http(s) |\n\nSKU di body memakai `{{$timestamp}}` supaya selalu unik setiap dijalankan. ID produk baru disimpan ke `{{admin_product_id}}`.\n\n**Response:** 201 Created, 401 tanpa token, 403 bukan admin, 409 SKU sudah dipakai, 422 validasi gagal / kategori tidak ada."
+          },
+          "response": [
+            {
+              "name": "201 Created - product created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/products",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"category_id\": 1,\n  \"sku\": \"DEMO-001\",\n  \"title\": \"Nusa Phone X2\",\n  \"description\": \"Smartphone 6.7 inci, RAM 12GB, storage 256GB.\",\n  \"price\": 4299000,\n  \"stock\": 20,\n  \"image_url\": \"https://example.com/images/nusa-phone-x2.jpg\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Product created\",\n  \"data\": {\n    \"id\": 31,\n    \"sku\": \"DEMO-001\",\n    \"title\": \"Nusa Phone X2\",\n    \"description\": \"Smartphone 6.7 inci, RAM 12GB, storage 256GB.\",\n    \"price\": 4299000,\n    \"stock\": 20,\n    \"image_url\": \"https://example.com/images/nusa-phone-x2.jpg\",\n    \"created_at\": \"2026-11-19T13:52:10.960Z\",\n    \"category\": {\n      \"id\": 1,\n      \"slug\": \"smartphones\",\n      \"name\": \"Smartphones\"\n    }\n  }\n}"
+            },
+            {
+              "name": "401 Unauthorized - no token",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/products",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"category_id\": 1,\n  \"sku\": \"DEMO-001\",\n  \"title\": \"Nusa Phone X2\",\n  \"description\": \"Smartphone 6.7 inci, RAM 12GB, storage 256GB.\",\n  \"price\": 4299000,\n  \"stock\": 20,\n  \"image_url\": \"https://example.com/images/nusa-phone-x2.jpg\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Authentication token is missing\"\n}"
+            },
+            {
+              "name": "403 Forbidden - logged in as customer",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/products",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"category_id\": 1,\n  \"sku\": \"DEMO-001\",\n  \"title\": \"Nusa Phone X2\",\n  \"description\": \"Smartphone 6.7 inci, RAM 12GB, storage 256GB.\",\n  \"price\": 4299000,\n  \"stock\": 20,\n  \"image_url\": \"https://example.com/images/nusa-phone-x2.jpg\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"You do not have permission to access this resource\"\n}"
+            },
+            {
+              "name": "409 Conflict - SKU already used",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/products",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"category_id\": 1,\n  \"sku\": \"sp-001\",\n  \"title\": \"Nusa Phone X2\",\n  \"description\": \"Smartphone 6.7 inci, RAM 12GB, storage 256GB.\",\n  \"price\": 4299000,\n  \"stock\": 20,\n  \"image_url\": \"https://example.com/images/nusa-phone-x2.jpg\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"SKU is already used by another product\",\n  \"errors\": {\n    \"sku\": [\n      \"SKU is already used by another product\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "422 Validation failed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/products",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"sku\": \"demo 01\",\n  \"title\": \"\",\n  \"price\": -1000,\n  \"stock\": \"5\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": {\n    \"category_id\": [\n      \"Category ID is required\"\n    ],\n    \"sku\": [\n      \"SKU may only contain letters, numbers and dashes\"\n    ],\n    \"title\": [\n      \"Title is required\"\n    ],\n    \"price\": [\n      \"Price must be at least 0\"\n    ],\n    \"stock\": [\n      \"Stock must be a number\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "422 Category not found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/products",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"category_id\": 999,\n  \"sku\": \"DEMO-002\",\n  \"title\": \"Nusa Phone X2\",\n  \"description\": \"Smartphone 6.7 inci, RAM 12GB, storage 256GB.\",\n  \"price\": 4299000,\n  \"stock\": 20,\n  \"image_url\": \"https://example.com/images/nusa-phone-x2.jpg\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": {\n    \"category_id\": [\n      \"Category not found\"\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/products/{{admin_product_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{admin_product_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 3999000,\n  \"stock\": 15\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "**Khusus admin.** Partial update: hanya field yang dikirim yang berubah (field sama dengan Create Product, semuanya opsional, minimal satu).\n\nMengubah harga **tidak** mengubah order lama, karena `order_items` menyimpan snapshot harga saat checkout.\n\n**Response:** 200 OK, 401, 403, 404 produk tidak ada, 409 SKU sudah dipakai, 422 validasi gagal / body kosong."
+          },
+          "response": [
+            {
+              "name": "200 OK - product updated",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/products/31",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products",
+                    "31"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"price\": 3999000,\n  \"stock\": 15\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Product updated\",\n  \"data\": {\n    \"id\": 31,\n    \"sku\": \"DEMO-001\",\n    \"title\": \"Nusa Phone X2\",\n    \"description\": \"Smartphone 6.7 inci, RAM 12GB, storage 256GB.\",\n    \"price\": 3999000,\n    \"stock\": 15,\n    \"image_url\": \"https://example.com/images/nusa-phone-x2.jpg\",\n    \"created_at\": \"2026-11-19T13:52:10.960Z\",\n    \"category\": {\n      \"id\": 1,\n      \"slug\": \"smartphones\",\n      \"name\": \"Smartphones\"\n    }\n  }\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/products/999999",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products",
+                    "999999"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"price\": 3999000,\n  \"stock\": 15\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Product not found\"\n}"
+            },
+            {
+              "name": "422 Empty body",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/products/31",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products",
+                    "31"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": {\n    \"_body\": [\n      \"At least one field must be provided\"\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/products/{{admin_product_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{admin_product_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "**Khusus admin.** Menghapus produk. Item produk ini di keranjang user ikut terhapus (`ON DELETE CASCADE`).\n\nProduk yang sudah pernah dipesan **tidak bisa dihapus** (`order_items` → `ON DELETE RESTRICT`) agar riwayat order tetap utuh → 409. Untuk berhenti menjual, set `stock` ke 0 lewat Update Product.\n\n**Response:** 200 OK, 401, 403, 404 produk tidak ada, 409 produk punya riwayat order."
+          },
+          "response": [
+            {
+              "name": "200 OK - product deleted",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/products/31",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products",
+                    "31"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Product deleted\",\n  \"data\": null\n}"
+            },
+            {
+              "name": "409 Conflict - product has order history",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/products/1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products",
+                    "1"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Product has order history and cannot be deleted\",\n  \"errors\": {\n    \"product\": [\n      \"Product has order history. Set its stock to 0 to stop selling it.\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/products/31",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products",
+                    "31"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Product not found\"\n}"
             }
           ]
         }

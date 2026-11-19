@@ -14,4 +14,24 @@ async function show(req, res) {
   return sendSuccess(res, { data: product });
 }
 
-module.exports = { list, show };
+// ---------- Admin (route-nya dijaga authenticate + authorize('admin')) ----------
+
+// POST /api/products -> 201 karena membuat resource baru
+async function create(req, res) {
+  const product = await productService.createProduct(req.validated.body);
+  return sendSuccess(res, { statusCode: 201, message: 'Product created', data: product });
+}
+
+// PATCH /api/products/:id -> hanya field yang dikirim yang berubah
+async function update(req, res) {
+  const product = await productService.updateProduct(req.validated.params.id, req.validated.body);
+  return sendSuccess(res, { message: 'Product updated', data: product });
+}
+
+// DELETE /api/products/:id -> 200 dengan pesan (data: null), sama seperti hapus item cart
+async function remove(req, res) {
+  await productService.deleteProduct(req.validated.params.id);
+  return sendSuccess(res, { message: 'Product deleted' });
+}
+
+module.exports = { list, show, create, update, remove };

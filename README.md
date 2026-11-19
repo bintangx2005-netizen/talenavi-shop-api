@@ -146,8 +146,8 @@ curl http://localhost:3000/api/health
 
 File dokumentasi ada di folder [`docs/postman/`](docs/postman/):
 
-- `talenavi-shop-api.postman_collection.json` — seluruh endpoint, dikelompokkan per fitur (Auth, Products, Cart, Orders, Health), lengkap dengan deskripsi, contoh request, dan contoh response sukses maupun error.
-- `talenavi-shop-api.postman_environment.json` — variabel `base_url` (default `http://localhost:3000`), `token`, dan lainnya.
+- `talenavi-shop-api.postman_collection.json` — seluruh endpoint, dikelompokkan per fitur (Auth, Products, Admin - Products, Cart, Orders, Health), lengkap dengan deskripsi, contoh request, dan contoh response sukses maupun error.
+- `talenavi-shop-api.postman_environment.json` — variabel `base_url` (default `http://localhost:3000`), `token`, `admin_token`, dan lainnya.
 
 **Cara membuka:**
 
@@ -160,6 +160,8 @@ Contoh response pada setiap request dapat dilihat dengan membuka bagian **Exampl
 
 **Alur demo:** Register → Login → List Products → Product Detail → Add Item to Cart → Get Cart → Checkout → Order History → Order Detail.
 
+**Endpoint admin:** kirim **Auth → Login (Admin)**. Token admin disimpan ke `{{admin_token}}` (terpisah dari `{{token}}` customer) dan otomatis dipakai folder **Admin - Products** (Create → Update → Delete).
+
 ## Daftar Endpoint
 
 Base URL: `http://localhost:3000/api`
@@ -171,6 +173,9 @@ Base URL: `http://localhost:3000/api`
 | GET | `/auth/me` | ✔ | Data user yang sedang login |
 | GET | `/products` | | List produk (pagination, search, filter, sort) |
 | GET | `/products/:id` | | Detail produk |
+| POST | `/products` | Admin | Tambah produk baru |
+| PATCH | `/products/:id` | Admin | Ubah sebagian data produk (harga, stok, dll.) |
+| DELETE | `/products/:id` | Admin | Hapus produk (ditolak jika sudah punya riwayat order) |
 | GET | `/categories` | | Daftar kategori beserta jumlah produk |
 | GET | `/cart` | ✔ | Isi keranjang, subtotal per item, dan total harga |
 | POST | `/cart/items` | ✔ | Tambah produk ke keranjang |
@@ -181,7 +186,22 @@ Base URL: `http://localhost:3000/api`
 | GET | `/orders/:id` | ✔ | Detail order beserta item-itemnya |
 | GET | `/health` | | Status server dan database |
 
-Endpoint bertanda ✔ membutuhkan header `Authorization: Bearer <token>`.
+Endpoint bertanda ✔ membutuhkan header `Authorization: Bearer <token>`. Endpoint bertanda **Admin** membutuhkan token dari akun ber-role `admin`.
+
+**Admin vs customer:** keduanya login di endpoint yang sama (`POST /auth/login`); yang membedakan adalah kolom `role` di tabel `users`. Route admin dijaga dua middleware berurutan: `authenticate` (tanpa token / token tidak valid → `401`) lalu `authorize('admin')` (login tetapi bukan admin → `403`). Role dibaca ulang dari database di setiap request, bukan dari token, sehingga pencabutan role langsung berlaku. Registrasi selalu menghasilkan role `customer`; akun admin hanya dibuat lewat seeder/database.
+
+**Body `POST /products`** (pada `PATCH` semua field opsional, minimal satu):
+
+| Field | Aturan |
+|---|---|
+| `category_id` | integer, wajib, kategori harus ada (jika tidak → `422`) |
+| `sku` | wajib, unik (jika sudah dipakai → `409`), huruf/angka/strip, otomatis huruf besar |
+| `title` | wajib, maks 200 karakter |
+| `description` | opsional, default `""` |
+| `price`, `stock` | integer ≥ 0 |
+| `image_url` | opsional, URL http(s) atau `null` |
+
+Menghapus produk ikut menghapus produk tersebut dari keranjang user (`ON DELETE CASCADE`). Produk yang sudah pernah dipesan tidak bisa dihapus (`409`) agar riwayat order tetap utuh; untuk berhenti menjualnya, set `stock` ke 0.
 
 **Query parameter `GET /products`:**
 
@@ -202,8 +222,9 @@ Contoh: `/api/products?q=phone&category=smartphones&sort=price_asc&page=1`
 | 200 / 201 | Berhasil / resource baru dibuat |
 | 400 | Body JSON tidak valid |
 | 401 | Token tidak ada, tidak valid, kedaluwarsa, atau login gagal |
+| 403 | Sudah login tetapi bukan admin (endpoint admin) |
 | 404 | Data tidak ditemukan (termasuk data milik user lain) |
-| 409 | Email sudah terdaftar, stok tidak mencukupi saat checkout |
+| 409 | Email / SKU sudah dipakai, stok tidak mencukupi saat checkout, produk yang punya riwayat order dihapus |
 | 422 | Validasi gagal, quantity melebihi stok, keranjang kosong |
 | 429 | Terlalu banyak percobaan login |
 | 500 | Error internal (detail hanya dicatat di log server) |
@@ -285,7 +306,7 @@ Contoh response stok tidak mencukupi:
 
 ## Testing
 
-Integration test untuk checkout memakai test runner bawaan Node (`node:test`) dan [`supertest`](https://github.com/ladjs/supertest). Request dikirim ke `app` (tanpa membuka port), melewati seluruh layer sampai PostgreSQL, lalu hasilnya dicek dari response **dan** langsung dari database.
+Integration test untuk checkout dan CRUD produk admin memakai test runner bawaan Node (`node:test`) dan [`supertest`](https://github.com/ladjs/supertest). Request dikirim ke `app` (tanpa membuka port), melewati seluruh layer sampai PostgreSQL, lalu hasilnya dicek dari response **dan** langsung dari database.
 
 ```bash
 npm test
@@ -302,6 +323,13 @@ Test memakai **database terpisah** bernama `<DB_NAME>_test` (mis. `talenavi_shop
 | Race condition (row lock) | Checkout **menunggu** baris produk yang sedang dikunci transaksi lain, lalu membaca stok terbaru → `409`, stok tidak minus |
 | Dua checkout bersamaan | Tepat satu `201` dan satu `409` |
 | Order milik user lain / tanpa token | `404` / `401` |
+
+| Skenario ([`tests/admin-products.test.js`](tests/admin-products.test.js)) | Yang diverifikasi |
+|---|---|
+| Hak akses | Tanpa token `401`; customer `403` untuk create/update/delete (data tidak berubah) |
+| Create | `201`, SKU dinormalisasi huruf besar, langsung tampil di katalog public; validasi `422`; SKU kembar `409`; kategori tidak ada `422` |
+| Update | Hanya field yang dikirim yang berubah; body kosong `422`; produk tidak ada `404`; SKU kembar `409` |
+| Delete | `200` dan item di keranjang ikut terhapus; produk yang punya riwayat order `409`; produk tidak ada `404` |
 
 Test race condition bersifat deterministik: test membuka transaksi sendiri yang mengunci baris produk, lalu memastikan checkout tertahan. Jika `FOR UPDATE` dihapus dari repository, test ini gagal (checkout membaca stok lama dan berakhir `500` karena CHECK constraint).
 
@@ -323,7 +351,8 @@ src/
 tests/
 ├── helpers/test-env.js  # Mengarahkan aplikasi ke database test
 ├── setup-test-db.js     # create → reset → migrate → seed database test
-└── checkout.test.js     # Integration test checkout
+├── checkout.test.js     # Integration test checkout
+└── admin-products.test.js # Integration test CRUD produk admin
 ```
 
 Alur request: `routes → middlewares → controller → service → repository → database`. Controller tidak menulis SQL, repository tidak mengetahui HTTP.
