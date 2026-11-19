@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const { pool } = require('../config/database');
 const { sendSuccess } = require('../utils/response');
+const authRoutes = require('./auth.routes');
 
 const router = Router();
 
@@ -10,8 +11,8 @@ router.get('/health', async (req, res) => {
   return sendSuccess(res, { message: 'Service is healthy', data: { database: 'connected' } });
 });
 
-// Route fitur akan didaftarkan di sini:
-// router.use('/auth', authRoutes);
+router.use('/auth', authRoutes);
+// Route fitur berikutnya:
 // router.use('/products', productRoutes);
 // router.use('/categories', categoryRoutes);
 // router.use('/cart', cartRoutes);
